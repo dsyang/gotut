@@ -10,10 +10,21 @@ from twilio.util import TwilioCapability
 
 import local_settings
 
+from flaskext.mongoengine import MongoEngine
 
 # Declare and configure application
 app = Flask(__name__, static_url_path='/static')
 app.config.from_pyfile('local_settings.py')
+mongo_uri = app.config["MONGOLAB_URI"]
+app.config["MONGODB_DB"] = 'derp'
+db = MongoEngine(app)
+
+
+def register_blueprints(app):
+    from gotut.views import posts
+    app.register_blueprint(posts)
+
+register_blueprints(app)
 
 
 # Voice Request URL
