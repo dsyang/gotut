@@ -18,11 +18,11 @@ app.config.from_pyfile('local_settings.py')
 if 'MONGOLAB_URI' in app.config:
     from pymongo.uri_parser import parse_uri
     params = parse_uri(app.config['MONGOLAB_URI'])
-    app.config['MONGODB_DB'] = params.database
-    app.config['MONGODB_USERNAME'] = params.username
-    app.config['MONGODB_PASSWORD'] = params.password
-    app.config['MONGODB_HOST'] = params.nodelist[0][0]
-    app.config['MONGODB_PORT'] = params.nodelist[0][1]
+    app.config['MONGODB_DB'] = params['database']
+    app.config['MONGODB_USERNAME'] = params['username']
+    app.config['MONGODB_PASSWORD'] = params['password']
+    app.config['MONGODB_HOST'] = params['nodelist'][0][0]
+    app.config['MONGODB_PORT'] = params['nodelist'][0][1]
 else:
     app.config["MONGODB_DB"] = 'derp'
 
