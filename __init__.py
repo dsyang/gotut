@@ -16,8 +16,16 @@ from flaskext.mongoengine import MongoEngine
 app = Flask(__name__, static_url_path='/static')
 app.config.from_pyfile('local_settings.py')
 mongo_uri = app.config["MONGOLAB_URI"]
-app.config["MONGO_DB"] = 'derp'
+app.config["MONGODB_DB"] = 'derp'
 db = MongoEngine(app)
+
+
+def register_blueprints(app):
+    from gotut.views import posts
+    app.register_blueprint(posts)
+
+register_blueprints(app)
+
 
 # Voice Request URL
 @app.route('/voice', methods=['GET', 'POST'])
