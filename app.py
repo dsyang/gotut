@@ -63,7 +63,6 @@ def index():
         'client_url': url_for('.client', _external=True)}
     return render_template('index.html', params=params)
 
-
 # If PORT not specified by environment, assume development config.
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
