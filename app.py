@@ -20,7 +20,7 @@ app.config.from_pyfile('local_settings.py')
 @app.route('/voice', methods=['GET', 'POST'])
 def voice():
     response = twiml.Response()
-    response.say("Congratulations! You deployed the Twilio Hackpack" \
+    response.say("Congratulations! You deployed the Twilio Hackpack"
             " for Heroku and Flask.")
     return str(response)
 
@@ -29,7 +29,7 @@ def voice():
 @app.route('/sms', methods=['GET', 'POST'])
 def sms():
     response = twiml.Response()
-    response.sms("Congratulation! You deployed the Twilio Hackpack" \
+    response.sms("Congratulation! You deployed the Twilio Hackpack"
             " for Heroku and Flask.")
     return str(response)
 
