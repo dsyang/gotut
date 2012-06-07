@@ -19,6 +19,7 @@ MONGOLAB_URI = 'mongodb://heroku_app5033310:onqn6daqivk9' \
 '''
 # Begin Heroku configuration - configured through environment variables.
 import os
+PORT = os.environ.get('PORT', None)
 TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', None)
 TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', None)
 TWILIO_CALLER_ID = os.environ.get('TWILIO_CALLER_ID', None)
