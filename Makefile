@@ -7,7 +7,5 @@ test:
 configure:
 	python configure.py
 
-deploy:
-	pip freeze > requirements.txt
-	git commit -am "Automated commit before pushing to heroku"
-	git push heroku
+clean:
+	rm *.pyc
