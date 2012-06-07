@@ -15,7 +15,7 @@ from flaskext.mongoengine import MongoEngine
 # Declare and configure application
 app = Flask(__name__, static_url_path='/static')
 app.config.from_pyfile('local_settings.py')
-if 'MONGOLAB_URI' in app.config:
+if app.config['MONGOLAB_URI']:
     from pymongo.uri_parser import parse_uri
     params = parse_uri(app.config['MONGOLAB_URI'])
     app.config['MONGODB_DB'] = params['database']
