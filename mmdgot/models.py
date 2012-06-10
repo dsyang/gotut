@@ -2,11 +2,13 @@ import datetime
 import re
 from flask import url_for
 from mmdgot import db
-
+from wtforms import Form, TextField, validators
+from wtforms.validators import ValidationError
 
 def e164(number):
     """
     Takes a string and tries to parse a valid phone number out of it
+    Modified
     """
     number = keypad(number)
     number = re.sub(r"[^0-9+]", "", number)
@@ -30,11 +32,6 @@ def e164(number):
     match = re.match(r"^\+?1?([2-9]11)$", number)
     if match:
         return u"+1{}".format(match.group(1))
-
-    # validate shortcode
-    match = re.match(r"^\+?([0-9]{3,6})$", number)
-    if match:
-        return u"{}".format(match.group(1))
 
     msg = "Could not parse {} as a valid phone number".format(number)
     raise ValueError(msg)
@@ -98,3 +95,21 @@ class Number(db.EmbeddedDocument):
     confirmed = db.BooleanField(default=False)
     recording = db.URLField()
     first = db.BooleanField(default=False)
+
+
+class NewGameForm(Form):
+    game_name = TextField(u'Game Name', validators=[validators.required()])
+    phone_numbers  = TextField(u'Phone Numbers')
+
+    def validate_phone_numbers(form, field):
+        numbers = [n.strip() for n in field.data.split(',')]
+        if len(numbers) < 2:
+            raise ValidationError("You must enter at least two numbers!")
+        else:
+            for n in numbers:
+                try:
+                    e164(n)
+                except ValueError:
+                    raise ValidationError("The phone number {} was unable to "
+                                          "be parsed, try it without parens "
+                                          "or dashes".format(n))

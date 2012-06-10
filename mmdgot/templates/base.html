@@ -1,18 +1,33 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-      <title>{% block title %}{% endblock %} 
-          - Twilio Hackpack for Heroku and Flask</title>
-    {% block head %}{% endblock %}
-    <link rel="shortcut icon" href="/static/images/favicon.ico" />
-    <link rel="apple-touch-icon"
-        href="http://static1.twilio.com/packages/favicons/img/Twilio_57.png" />
-    <link rel="apple-touch-icon" sizes="72x72"
-        href="http://static1.twilio.com/packages/favicons/img/Twilio_72.png" />
-    <link rel="apple-touch-icon" sizes="114x114"
-        href="http://static0.twilio.com/packages/favicons/img/Twilio_114.png" />
+    <meta charset="utf-8" />
+    <title>Example mongodb app</title>
+    <link rel="stylesheet"    href="/static/bootstrap/css/bootstrap.min.css"
+    type="text/css" media="screen" />
+    <style src="/static/bootstrap/js/bootstrap.min.js">
+    <style>.content {padding-top: 80px;} </style>
   </head>
+
   <body>
-      {% block content %}{% endblock %}
+    {%- block topbar -%}
+    <div class="topbar">
+      <div class="fill">
+        <div class="container">
+          <h2>
+            <a href="/" class="brand"> MMDGOT</a>
+          </h2>
+          <h3>A Game of Telephone powered by Twilio</h3>
+      </div>
+    </div>
+    {%- endblock -%}
+
+    <div class="container">
+      <div class="content">
+        {% block page_header %}{% endblock %}
+        {% block content %}{% endblock %}
+      </div>
+    </div>
+    {% block js_footer %}{% endblock %}
   </body>
 </html>

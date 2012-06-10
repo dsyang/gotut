@@ -1,11 +1,13 @@
 from flask import Blueprint, request, redirect, render_template, url_for
 from flask.views import MethodView
-from mmdgot.models import Game, Number
+from mmdgot.models import Game, Number, NewGameForm, e164
 from flaskext.mongoengine.wtf import model_form
 from twilio import twiml, rest
 from mmdgot import app
 import random
 
+
+random.seed()
 
 def random_sentence():
     sentences = ["Again comes the fire spout.",
@@ -30,7 +32,7 @@ def get_previous_recording(g):
     return g.last_recording
 
 
-URL_ROOT = 'http://4g6j.localtunnel.com'
+URL_ROOT = 'http://mmdgot.herokuapp.com'
 TWILIO_NUMBER = '+16464807209'
 client = rest.TwilioRestClient(app.config['TWILIO_ACCOUNT_SID'],
                                app.config['TWILIO_AUTH_TOKEN'])
@@ -38,15 +40,25 @@ client = rest.TwilioRestClient(app.config['TWILIO_ACCOUNT_SID'],
 game_blueprint = Blueprint('game', __name__)
 
 
+
 @game_blueprint.route('/game/create', methods=['GET', 'POST'])
 def create_game():
-    if request.method.upper() == 'GET':
-        pass
-    elif request.method.upper() == 'POST':
-        pass
-    else:
-        return "tycon mismatch"
-    return render_template('game_create.html', context = context)
+    form = NewGameForm(request.form)
+    if request.method.upper() == 'POST' and form.validate():
+        digi=''.join([str(random.randint(0,9)) for i in xrange(4)])
+        g = Game()
+        g.name = form.game_name.data
+        g.slug = ''.join([l.title() for l in (g.name.split(' '))])+digi
+        numbers = [n.strip() for n in form.phone_numbers.data.split(',')]
+        for num in numbers:
+            n = Number()
+            n.number = e164(num)
+            g.numbers.append(n)
+        g.save()
+        return redirect(url_for('game.start', slug=g.slug))
+
+
+    return render_template('game_create.html', context = {'form': form})
 
 @game_blueprint.route('/game/<slug>/status', methods=['GET', 'POST'])
 def game_status(slug):
@@ -61,7 +73,7 @@ def start(slug):
                         url=URL_ROOT + url_for('.first_call', slug=slug),
                         status_callback=URL_ROOT + url_for('.next_call',
                                                          slug=slug))
-    return slug
+    return "Starting game {}".format("slug")
 
 
 @game_blueprint.route('/game/<slug>/begin', methods=['GET', 'POST'])

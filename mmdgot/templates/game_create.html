@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% import "_forms.html" as forms %}
+
+{% block content %}
+<hr />
+<h2>Start a telephone game</h2>
+<form method="post" action="{{url_for('game.create_game')}}">
+  {{forms.render(context['form'])}}
+    <div class="actions">
+      <input type="submit" class="btn primary" value="start!" />
+    </div>
+</form>
+
+{% endblock %}
