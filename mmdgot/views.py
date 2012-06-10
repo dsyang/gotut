@@ -48,7 +48,7 @@ def create_game():
         return "tycon mismatch"
     return render_template('game_create.html', context = context)
 
-@game_blutprint.route('/game/<slug>/status', methods=['GET', 'POST'])
+@game_blueprint.route('/game/<slug>/status', methods=['GET', 'POST'])
 def game_status(slug):
     asdf
     return render_template('game_status.html', data = data)
