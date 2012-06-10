@@ -184,6 +184,7 @@ def summary(slug):
     summary['name'] = g.name
     summary['recordings'] = [n.recording for n in g.numbers]
     print g.numbers[0].recording
+    print summary['recordings']
     summary['slug'] = g.slug
     summary['num'] = len(g.numbers)
 
