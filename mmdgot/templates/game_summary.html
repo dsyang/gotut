@@ -10,7 +10,7 @@
 <ol>
   <li> Starting text: {{summary['starting_text']}} </li>
   {% for links in summary['recordings'] %}
-  <li> {{ links }}</li>
+  <li> <a href="{{ links }}">{{ link }}</a></li>
   {% endfor %}
 </ol>
 {% endblock %}
