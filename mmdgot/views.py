@@ -183,6 +183,7 @@ def summary(slug):
     summary['starting_text'] = g.starting_text
     summary['name'] = g.name
     summary['recordings'] = [n.recording for n in g.numbers]
+    print g.numbers[0].recording
     summary['slug'] = g.slug
     summary['num'] = len(g.numbers)
 
