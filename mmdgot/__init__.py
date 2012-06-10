@@ -3,7 +3,7 @@ import os
 from flask import Flask
 from flask import render_template
 from flask import url_for
-from flask import request
+from flask import request, redirect
 
 from twilio import twiml
 from twilio.util import TwilioCapability
