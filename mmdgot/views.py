@@ -87,9 +87,9 @@ def first_call(slug):
             g.save()
             break
     r = twiml.Response()
-    r.say("This is a game of telephone named {} ."
-          "Press one to hear the phrase:".format(g.name))
     with r.gather(finishOnKey=1):
+        r.say("This is a game of telephone named {} ."
+          "Press one to hear the phrase:".format(g.name))
         r.say(s)
         r.say("Recording your voice will begin in 2 seconds,"
               "press pound to end recording")
@@ -139,9 +139,9 @@ def next_call(slug):
 def recursive_call(slug):
     g = Game.objects.get_or_404(slug=slug)
     r = twiml.Response()
-    r.say("This is a game of telephone named {} ."
-          "Press one to hear the phrase:".format(g.name))
     with r.gather(finishOnKey=1):
+        r.say("This is a game of telephone named {} ."
+              "Press one to hear the phrase:".format(g.name))
         r.play(get_previous_recording(g))
         r.say("Recording your voice will begin in 2 seconds,"
               "press pound to end recording")
