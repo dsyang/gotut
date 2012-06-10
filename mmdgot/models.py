@@ -79,6 +79,7 @@ class Game(db.Document):
     slug = db.StringField(max_length=255, required=True)
     numbers = db.ListField(db.EmbeddedDocumentField('Number'))
     last_recording = db.StringField(max_length=255)
+    starting_text = db.StringField(max_length=255)
 
     def get_absolute_url(self):
         return url_for('game', kwargs={'slug': self.slug})
