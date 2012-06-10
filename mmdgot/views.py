@@ -182,7 +182,8 @@ def summary(slug):
     summary = {}
     summary['starting_text'] = g.starting_text
     summary['name'] = g.name
-    summary['recordings'] = [n.recording for n in g.numbers]
+    summary['recordings'] = [str(n.recording) for n in g.numbers]
     summary['slug'] = g.slug
+    summary['num'] = len(g.numbers)
 
     return render_template("game_summary.html", summary= summary)

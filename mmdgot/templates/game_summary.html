@@ -6,7 +6,7 @@
 {% block content %}
 <hr />
 <h2>Game Summary of: {{summary['slug']}}</h2>
-<p>There were {{}} participants in this game.</p>
+<p>There were {{summary['num']}} participants in this game.</p>
 <ol>
   {% for links in summary['recordings'] %}
   <li> {{ link }}</li>
