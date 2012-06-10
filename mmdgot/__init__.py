@@ -41,6 +41,15 @@ register_blueprints()
 def callback():
     return ""
 
+def resetgame(g):
+    for n in g.numbers:
+        n.first = False
+        n.recording = None
+        n.confirmed = False
+    g.last_recording = None
+    g.save()
+    return True
+
 # Voice Request URL
 @app.route('/voice', methods=['GET', 'POST'])
 def voice():

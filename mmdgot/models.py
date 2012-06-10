@@ -78,6 +78,7 @@ class Game(db.Document):
     name = db.StringField(max_length=255, required=True)
     slug = db.StringField(max_length=255, required=True)
     numbers = db.ListField(db.EmbeddedDocumentField('Number'))
+    last_recording = db.StringField(max_length=255)
 
     def get_absolute_url(self):
         return url_for('game', kwargs={'slug': self.slug})
@@ -95,4 +96,4 @@ class Number(db.EmbeddedDocument):
     number = db.StringField(required=True)
     confirmed = db.BooleanField(default=False)
     recording = db.URLField()
-    started = db.BooleanField(default=False)
+    first = db.BooleanField(default=False)
