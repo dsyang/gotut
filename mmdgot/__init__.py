@@ -71,11 +71,7 @@ def sms():
 # Installation success page
 @app.route('/')
 def index():
-    params = {
-        'voice_request_url': url_for('.voice', _external=True),
-        'sms_request_url': url_for('.sms', _external=True),
-    }
-    return render_template('index.html', params=params)
+    return redirect(url_for('game.create_game'))
 
 # If PORT not specified by environment, assume development config.
 if __name__ == '__main__':
