@@ -27,6 +27,11 @@ def get_next_number(g):
             return n.number
     return None
 
+def get_start_number(g):
+    for n in g.numbers:
+        if n.first:
+            return n.number
+    return None
 
 def get_previous_recording(g):
     return g.last_recording
@@ -126,11 +131,14 @@ def next_call(slug):
                         status_callback=URL_ROOT + url_for('.next_call',
                                                            slug=slug))
     else:
-        start_num = '+17344081407'
-        client.calls.create(to=start_num, from_=TWILIO_NUMBER,
-                        url=URL_ROOT + url_for('.end_game', slug=slug),
-                        status_callback=URL_ROOT + url_for('.end_broadcast',
-                                                           slug=slug))
+        start_num = get_start_number(g)
+        if start_num:
+            client.calls.create(to=start_num, from_=TWILIO_NUMBER,
+                                url=URL_ROOT + url_for('.end_game', slug=slug),
+                                status_callback=URL_ROOT +
+                                url_for('.end_broadcast', slug=slug))
+        else:
+            return redirect(url_for('.end_broadcast', slug=slug))
     return "Complete"
 
 
