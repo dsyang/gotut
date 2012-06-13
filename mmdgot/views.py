@@ -57,9 +57,10 @@ def get_previous_recording(g):
     return g.last_recording
 
 
-LOCAL_ROOT = 'http://4c2a.localtunnel.com'
+LOCAL_ROOT = 'http://42qk.localtunnel.com'
 URL_ROOT = LOCAL_ROOT #'http://mmdgot.herokuapp.com'
 TWILIO_NUMBER = '+16464807209'
+TRANSCRIPTION = True
 client = rest.TwilioRestClient(app.config['TWILIO_ACCOUNT_SID'],
                                app.config['TWILIO_AUTH_TOKEN'])
 
@@ -85,10 +86,20 @@ def create_game():
         return redirect(url_for('game.first_call', slug=g.slug))
     return render_template('game_create.html', context = {'form': form})
 
-@game_blueprint.route('/game/<slug>/status', methods=['GET', 'POST'])
-def game_status(slug):
-
-    return render_template('game_status.html', data = data)
+@game_blueprint.route('/game/<slug>/call/transcription', methods=['GET', 'POST'])
+def transcribe(slug):
+    g = Game.objects.get_or_404(slug=slug)
+    text = request.values.get('TranscriptionText')
+    status = request.values.get('TranscriptionStatus')
+    recordingurl = request.values.get('RecordingUrl')
+    for n in g.numbers:
+        if n.recording == recordingurl:
+            if status == 'completed':
+                n.recording_text = text
+            else:
+                n.recording_text = "Text transcription failed"
+    g.save()
+    return "Transcription processed"
 
 
 @game_blueprint.route('/game/<slug>/<state>/call/<number>',
@@ -96,8 +107,8 @@ def game_status(slug):
 def call_logic(slug, state, number):
     g = Game.objects.get_or_404(slug=slug)
     r = twiml.Response()
-    r.say("This is a game of telephone named {} powered by twilio."
-          "To hear the phrase, press one.".format(g.name))
+    r.say("This is a game of telephone named {}.".format(g.name))
+    r.say("To hear the phrase, press one.")
     r.gather(numDigits=1, action=url_for('.call_playback',
                                          slug=slug, state=state, number=number),
              timeout=7)
@@ -117,8 +128,13 @@ def call_playback(slug, state, number):
     r.say("Recording your phrase will begin in 2 seconds."
           " Press pound when finished recording.")
     r.pause(length=1)
-    r.record(action=(url_for('.update_record', slug=slug)), finishOnKey="*",
-             maxLength="30", timeout="2")
+    if TRANSCRIPTION:
+                r.record(action=(url_for('.update_record', slug=slug)),
+                         transcribeCallback=url_for('.transcribe', slug=slug),
+                         finishOnKey="*", maxLength="30", timeout="2")
+    else:
+        r.record(action=(url_for('.update_record', slug=slug)), finishOnKey="*",
+                 maxLength="30", timeout="2")
     return str(r)
 
 @game_blueprint.route('/game/<slug>/<state>/call/<number>/callback/<int:rep>',
@@ -217,6 +233,10 @@ def update_record(slug):
                                                request.values.get('To'))
         if n.number == request.values.get('To'):
             n.recording = request.values.get('RecordingUrl')
+            if TRANSCRIPTION:
+                n.recording_text = "Transcription in progress"
+            else:
+                n.recording_text = "Transcription disabled"
             g.last_recording = request.values.get('RecordingUrl')
             g.save()
             r.say("Your recording has been saved. Goodbye")
@@ -255,7 +275,7 @@ def summary(slug):
     summary = {}
     summary['starting_text'] = g.starting_text
     summary['name'] = g.name
-    summary['recordings'] = [n.recording for n in g.numbers]
+    summary['recordings'] = [(n.recording, n.recording_text) for n in g.numbers]
     print g.numbers[0].recording
     print summary['recordings']
     summary['slug'] = g.slug

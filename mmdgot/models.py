@@ -94,6 +94,7 @@ class Number(db.EmbeddedDocument):
     number = db.StringField(required=True)
     confirmed = db.BooleanField(default=False)
     recording = db.URLField()
+    recording_text = db.StringField()
     first = db.BooleanField(default=False)
 
 
