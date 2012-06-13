@@ -57,7 +57,8 @@ def get_previous_recording(g):
     return g.last_recording
 
 
-URL_ROOT = 'http://mmdgot.herokuapp.com'
+LOCAL_ROOT = 'http://4c2a.localtunnel.com'
+URL_ROOT = LOCAL_ROOT #'http://mmdgot.herokuapp.com'
 TWILIO_NUMBER = '+16464807209'
 client = rest.TwilioRestClient(app.config['TWILIO_ACCOUNT_SID'],
                                app.config['TWILIO_AUTH_TOKEN'])
@@ -95,11 +96,11 @@ def game_status(slug):
 def call_logic(slug, state, number):
     g = Game.objects.get_or_404(slug=slug)
     r = twiml.Response()
-    with r.gather(numDigits=1, action=url_for('.call_playback',
-                                    slug=slug, state=state, number=number),
-                  timeout=7):
-        r.say("This is a game of telephone named {}."
-              "Press one to hear the phrase".format(g.name))
+    r.say("This is a game of telephone named {} powered by twilio."
+          "To hear the phrase, press one.".format(g.name))
+    r.gather(numDigits=1, action=url_for('.call_playback',
+                                         slug=slug, state=state, number=number),
+             timeout=7)
     r.redirect(url_for('.call_logic', slug=slug, state=state, number=number))
     return str(r)
 
@@ -124,17 +125,28 @@ def call_playback(slug, state, number):
                       methods=['GET', 'POST'])
 def call_callback(slug, state, number, rep):
     g = Game.objects.get_or_404(slug=slug)
-    print request.values, rep
-    if bad_response(request.values.get('CallStatus')) and rep < 3:
+    have_recording = None
+    for n in g.numbers:
+        if n.number == number:
+            have_recording = n.recording
+
+
+    if (bad_response(request.values.get('CallStatus')) or
+        request.values.get('AnsweredBy') == 'machine' or
+        not have_recording) and rep < 2:
+        print request.values.get("CallStatus")
+        print  request.values.get('AnsweredBy'), rep
+        print "CALL THEM AGAIN!"
         call_url = URL_ROOT + url_for('.call_logic', slug=slug,
                                       state=state, number=number)
         callback_url = URL_ROOT + url_for('.call_callback', slug=slug,
                                           state=state, number=number,
                                           rep=(rep+1))
-        client.calls.create(to=number, from_=TWILIO_NUMBER,
-                            url=call_url, status_callback=callback_url)
+        client.calls.create(to=number, from_=TWILIO_NUMBER, if_machine='Hangup',
+                            timeout=15, url=call_url,
+                            status_callback=callback_url)
     else:
-        if rep >= 3:
+        if rep >= 2:
             for n in g.numbers:
                 if n.number == number:
                     n.recording = URL_ROOT + url_for('no_op')
@@ -155,15 +167,15 @@ def first_call(slug):
                                   state='f', number=n.number)
     callback_url = URL_ROOT + url_for('.call_callback', slug=slug,
                                       state='f', number=n.number, rep='0')
-
-    client.calls.create(to=n.number, from_=TWILIO_NUMBER,
-                        url=call_url, status_callback=callback_url)
+    print "calling {}".format(n.number)
+    client.calls.create(to=n.number, from_=TWILIO_NUMBER, if_machine='Hangup',
+                        timeout=15, url=call_url, status_callback=callback_url)
 
     return "Starting game {}".format(slug)
 
 
 def bad_response(s):
-    if s in ['busy', 'failed', 'no-answer', 'canceled']:
+    if s.lower() in ['busy', 'failed', 'no-answer', 'canceled']:
         return True
     else:
         return False
@@ -176,16 +188,20 @@ def make_next_call(slug, state, number):
                                       , state='n', number=number)
         callback_url = URL_ROOT + url_for('.call_callback', slug=slug
                                           , state='n', number=number, rep=0)
+        print "Making next call to {}".format(number)
         client.calls.create(to=number, from_=TWILIO_NUMBER,
-                            url=call_url, status_callback=callback_url)
+                            if_machine='hangup', url=call_url,
+                            status_callback=callback_url)
 
     else:
         start_num = get_start_number(g)
         end_url = URL_ROOT + url_for('.end_game', slug=slug)
         end_callback_url = URL_ROOT + url_for('.end_broadcast', slug=slug)
         if start_num:
+            print "making end call to {}".format(start_num)
             client.calls.create(to=start_num, from_=TWILIO_NUMBER,
-                                url=end_url, status_callback=end_callback_url)
+                                if_machine='hangup', url=end_url,
+                                status_callback=end_callback_url)
         else:
             return redirect(url_for('.end_broadcast', slug=slug))
 
