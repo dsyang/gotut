@@ -57,7 +57,7 @@ def get_previous_recording(g):
     return g.last_recording
 
 
-LOCAL_ROOT = 'http://42qk.localtunnel.com'
+LOCAL_ROOT = 'http://mmdgot.herokuapp.com'
 URL_ROOT = LOCAL_ROOT #'http://mmdgot.herokuapp.com'
 TWILIO_NUMBER = '+16464807209'
 TRANSCRIPTION = True
