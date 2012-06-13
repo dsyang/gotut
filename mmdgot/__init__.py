@@ -67,6 +67,9 @@ def sms():
             " for Heroku and Flask.")
     return str(response)
 
+@app.route('/This_Person_did_not_participate', methods=['GET', 'POST'])
+def no_op():
+    return "This Person did not participate, we are le sad T_T"
 
 # Installation success page
 @app.route('/')

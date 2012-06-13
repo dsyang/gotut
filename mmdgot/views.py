@@ -3,13 +3,13 @@ VIEWS:
 
 Module routes:
 summary       ||@/game/<slug>/summary
-*end_broadcast ||@/game/<slug>/broadcasr
+*end_broadcast ||@/game/<slug>/broadcast
 end_game      ||@/game/<slug>/end
 update_record ||@/game/<slug>/record
-*call_callback ||@/game/<slug>/<status>/call/<number>/callback/<rep>
+*call_callback ||@/game/<slug>/<state>/call/<number>/callback/<int:rep>
 *first_call    ||@/game/<slug>/begin
-call_playback ||@/game/<slug>/<status>/call/<number>/playback
-call_logic    ||@/game/<slug>/<status>/call/<number>
+call_playback ||@/game/<slug>/<state>/call/<number>/playback
+call_logic    ||@/game/<slug>/<state>/call/<number>
 *start         ||@/game/<slug>/start
 game_status   ||@/game/<slug>/status
 *create_game   ||@/game/create
@@ -81,7 +81,7 @@ def create_game():
             n.number = e164(num)
             g.numbers.append(n)
         g.save()
-        return redirect(url_for('game.start', slug=g.slug))
+        return redirect(url_for('game.first_call', slug=g.slug))
     return render_template('game_create.html', context = {'form': form})
 
 @game_blueprint.route('/game/<slug>/status', methods=['GET', 'POST'])
@@ -90,36 +90,26 @@ def game_status(slug):
     return render_template('game_status.html', data = data)
 
 
-@game_blueprint.route('/game/<slug>/start', methods=['GET', 'POST'])
-def start(slug):
-    g = Game.objects.get_or_404(slug=slug)
-    client.calls.create(to=g.numbers[0].number, from_=TWILIO_NUMBER,
-                        url=URL_ROOT + url_for('.first_call', slug=slug),
-                        status_callback=URL_ROOT + url_for('.next_call',
-                                                         slug=slug))
-    return "Starting game {}".format("slug")
-
-
-@game_blueprint.route('/game/<slug>/<status>/call/<number>',
+@game_blueprint.route('/game/<slug>/<state>/call/<number>',
                       methods=['GET', 'POST'])
-def call_logic(slug, status, number):
+def call_logic(slug, state, number):
     g = Game.objects.get_or_404(slug=slug)
     r = twiml.Response()
-    with r.gather(finishOnKey=1, action=url_for('.call_playback',
-                                    slug=slug, status=status, number=number)):
+    with r.gather(numDigits=1, action=url_for('.call_playback',
+                                    slug=slug, state=state, number=number),
+                  timeout=7):
         r.say("This is a game of telephone named {}."
               "Press one to hear the phrase".format(g.name))
-        r.pause(length=5)
-    r.redirect(url_for('.call_logic', slug=slug, status=status, number=number))
+    r.redirect(url_for('.call_logic', slug=slug, state=state, number=number))
     return str(r)
 
 
-@game_blueprint.route('/game/<slug>/<status>/call/<number>/playback',
+@game_blueprint.route('/game/<slug>/<state>/call/<number>/playback',
                       methods=['GET', 'POST'])
-def call_playback(slug, status, number):
+def call_playback(slug, state, number):
     g = Game.objects.get_or_404(slug=slug)
     r = twiml.Response()
-    if status == 'f':
+    if state == 'f':
         r.say(g.starting_text)
     else:
         r.play(get_previous_recording(g))
@@ -130,16 +120,16 @@ def call_playback(slug, status, number):
              maxLength="30", timeout="2")
     return str(r)
 
-@game_blueprint.route('/game/<slug>/<status>/call/<number>/callback/<rep>',
+@game_blueprint.route('/game/<slug>/<state>/call/<number>/callback/<int:rep>',
                       methods=['GET', 'POST'])
-def call_callback(slug, status, number, rep):
+def call_callback(slug, state, number, rep):
     g = Game.objects.get_or_404(slug=slug)
-
-    if bad_response(requests.values.get('status')) and rep < 3:
+    print request.values, rep
+    if bad_response(request.values.get('CallStatus')) and rep < 3:
         call_url = URL_ROOT + url_for('.call_logic', slug=slug,
-                                      status=status, number=number)
+                                      state=state, number=number)
         callback_url = URL_ROOT + url_for('.call_callback', slug=slug,
-                                          status=status, number=number,
+                                          state=state, number=number,
                                           rep=(rep+1))
         client.calls.create(to=number, from_=TWILIO_NUMBER,
                             url=call_url, status_callback=callback_url)
@@ -147,11 +137,11 @@ def call_callback(slug, status, number, rep):
         if rep >= 3:
             for n in g.numbers:
                 if n.number == number:
-                    n.recording = "Did Not Participate"
+                    n.recording = URL_ROOT + url_for('no_op')
                     g.save()
                     break
 
-        make_next_call(slug, status)
+        make_next_call(slug, state, number)
     return "Made next call"
 
 @game_blueprint.route('/game/<slug>/begin', methods=['GET', 'POST'])
@@ -162,9 +152,9 @@ def first_call(slug):
     g.save()
 
     call_url = URL_ROOT + url_for('.call_logic', slug=slug,
-                                  status='f', number=n.number)
+                                  state='f', number=n.number)
     callback_url = URL_ROOT + url_for('.call_callback', slug=slug,
-                                      status='f', number=n.number, rep='0')
+                                      state='f', number=n.number, rep='0')
 
     client.calls.create(to=n.number, from_=TWILIO_NUMBER,
                         url=call_url, status_callback=callback_url)
@@ -178,24 +168,24 @@ def bad_response(s):
     else:
         return False
 
-def make_next_call(slug, status, number):
+def make_next_call(slug, state, number):
     g = Game.objects.get_or_404(slug=slug)
     number = get_next_number(g)
     if number:
         call_url = URL_ROOT + url_for('.call_logic', slug=slug
-                                      , status='n', number=number)
+                                      , state='n', number=number)
         callback_url = URL_ROOT + url_for('.call_callback', slug=slug
-                                          , status='n', number=number, rep=0)
+                                          , state='n', number=number, rep=0)
         client.calls.create(to=number, from_=TWILIO_NUMBER,
                             url=call_url, status_callback=callback_url)
 
     else:
         start_num = get_start_number(g)
         end_url = URL_ROOT + url_for('.end_game', slug=slug)
-        end_callback_url = URL_ROOT + url_for('.end_broadcast, slug=slug')
+        end_callback_url = URL_ROOT + url_for('.end_broadcast', slug=slug)
         if start_num:
             client.calls.create(to=start_num, from_=TWILIO_NUMBER,
-                                url=end_url, callback_url=end_callback_url)
+                                url=end_url, status_callback=end_callback_url)
         else:
             return redirect(url_for('.end_broadcast', slug=slug))
 
@@ -213,7 +203,7 @@ def update_record(slug):
             n.recording = request.values.get('RecordingUrl')
             g.last_recording = request.values.get('RecordingUrl')
             g.save()
-            r.say("Your recording has been saved.")
+            r.say("Your recording has been saved. Goodbye")
             break
     return str(r)
 
