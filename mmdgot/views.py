@@ -1,3 +1,21 @@
+'''
+VIEWS:
+
+Module routes:
+summary       ||@/game/<slug>/summary
+*end_broadcast ||@/game/<slug>/broadcasr
+end_game      ||@/game/<slug>/end
+update_record ||@/game/<slug>/record
+*call_callback ||@/game/<slug>/<status>/call/<number>/callback/<rep>
+*first_call    ||@/game/<slug>/begin
+call_playback ||@/game/<slug>/<status>/call/<number>/playback
+call_logic    ||@/game/<slug>/<status>/call/<number>
+*start         ||@/game/<slug>/start
+game_status   ||@/game/<slug>/status
+*create_game   ||@/game/create
+*make_next_call
+'''
+
 from flask import Blueprint, request, redirect, render_template, url_for
 from flask.views import MethodView
 from mmdgot.models import Game, Number, NewGameForm, e164
@@ -17,6 +35,8 @@ def random_sentence():
                  'doe a dear a female dear',
                  'all your base are belong to us',
                  'make sandwich requires root access',
+                 'four eight fifteen sixteen twenty-three fourty-two',
+                 'red fish blue fish small fish big shark',
                  'danger will robinson danger']
     return random.choice(sentences)
 
@@ -54,6 +74,7 @@ def create_game():
         g = Game()
         g.name = form.game_name.data
         g.slug = ''.join([l.title() for l in (g.name.split(' '))])+digi
+        g.starting_text = random_sentence()
         numbers = [n.strip() for n in form.phone_numbers.data.split(',')]
         for num in numbers:
             n = Number()
@@ -61,13 +82,11 @@ def create_game():
             g.numbers.append(n)
         g.save()
         return redirect(url_for('game.start', slug=g.slug))
-
-
     return render_template('game_create.html', context = {'form': form})
 
 @game_blueprint.route('/game/<slug>/status', methods=['GET', 'POST'])
 def game_status(slug):
-    asdf
+
     return render_template('game_status.html', data = data)
 
 
@@ -81,28 +100,106 @@ def start(slug):
     return "Starting game {}".format("slug")
 
 
+@game_blueprint.route('/game/<slug>/<status>/call/<number>',
+                      methods=['GET', 'POST'])
+def call_logic(slug, status, number):
+    g = Game.objects.get_or_404(slug=slug)
+    r = twiml.Response()
+    with r.gather(finishOnKey=1, action=url_for('.call_playback',
+                                    slug=slug, status=status, number=number)):
+        r.say("This is a game of telephone named {}."
+              "Press one to hear the phrase".format(g.name))
+        r.pause(length=5)
+    r.redirect(url_for('.call_logic', slug=slug, status=status, number=number))
+    return str(r)
+
+
+@game_blueprint.route('/game/<slug>/<status>/call/<number>/playback',
+                      methods=['GET', 'POST'])
+def call_playback(slug, status, number):
+    g = Game.objects.get_or_404(slug=slug)
+    r = twiml.Response()
+    if status == 'f':
+        r.say(g.starting_text)
+    else:
+        r.play(get_previous_recording(g))
+    r.say("Recording your phrase will begin in 2 seconds."
+          " Press pound when finished recording.")
+    r.pause(length=1)
+    r.record(action=(url_for('.update_record', slug=slug)), finishOnKey="*",
+             maxLength="30", timeout="2")
+    return str(r)
+
+@game_blueprint.route('/game/<slug>/<status>/call/<number>/callback/<rep>',
+                      methods=['GET', 'POST'])
+def call_callback(slug, status, number, rep):
+    g = Game.objects.get_or_404(slug=slug)
+
+    if bad_response(requests.values.get('status')) and rep < 3:
+        call_url = URL_ROOT + url_for('.call_logic', slug=slug,
+                                      status=status, number=number)
+        callback_url = URL_ROOT + url_for('.call_callback', slug=slug,
+                                          status=status, number=number,
+                                          rep=(rep+1))
+        client.calls.create(to=number, from_=TWILIO_NUMBER,
+                            url=call_url, status_callback=callback_url)
+    else:
+        if rep >= 3:
+            for n in g.numbers:
+                if n.number == number:
+                    n.recording = "Did Not Participate"
+                    g.save()
+                    break
+
+        make_next_call(slug, status)
+    return "Made next call"
+
 @game_blueprint.route('/game/<slug>/begin', methods=['GET', 'POST'])
 def first_call(slug):
     g = Game.objects.get_or_404(slug=slug)
-    s = random_sentence()
-    for n in g.numbers:
-        if n.number == request.values.get('To'):
-            n.first = True
-            g.starting_text = s
-            g.save()
-            break
-    r = twiml.Response()
-    r.say("This is a game of telephone named {} ."
-          "Press one to hear the phrase:".format(g.name))
-    with r.gather(finishOnKey=1):
-        r.say(s)
-        r.say("Recording your voice will begin in 2 seconds,"
-              "press pound to end recording")
-        r.pause(length=1)
-        r.record(action=url_for('.update_record', slug=slug), finishOnKey='*',
-                 maxLength="30", timeout="2")
-    return str(r)
+    n = g.numbers[0]
+    n.first = True
+    g.save()
 
+    call_url = URL_ROOT + url_for('.call_logic', slug=slug,
+                                  status='f', number=n.number)
+    callback_url = URL_ROOT + url_for('.call_callback', slug=slug,
+                                      status='f', number=n.number, rep='0')
+
+    client.calls.create(to=n.number, from_=TWILIO_NUMBER,
+                        url=call_url, status_callback=callback_url)
+
+    return "Starting game {}".format(slug)
+
+
+def bad_response(s):
+    if s in ['busy', 'failed', 'no-answer', 'canceled']:
+        return True
+    else:
+        return False
+
+def make_next_call(slug, status, number):
+    g = Game.objects.get_or_404(slug=slug)
+    number = get_next_number(g)
+    if number:
+        call_url = URL_ROOT + url_for('.call_logic', slug=slug
+                                      , status='n', number=number)
+        callback_url = URL_ROOT + url_for('.call_callback', slug=slug
+                                          , status='n', number=number, rep=0)
+        client.calls.create(to=number, from_=TWILIO_NUMBER,
+                            url=call_url, status_callback=callback_url)
+
+    else:
+        start_num = get_start_number(g)
+        end_url = URL_ROOT + url_for('.end_game', slug=slug)
+        end_callback_url = URL_ROOT + url_for('.end_broadcast, slug=slug')
+        if start_num:
+            client.calls.create(to=start_num, from_=TWILIO_NUMBER,
+                                url=end_url, callback_url=end_callback_url)
+        else:
+            return redirect(url_for('.end_broadcast', slug=slug))
+
+    return "Complete"
 
 @game_blueprint.route('/game/<slug>/record', methods=['GET', 'POST'])
 def update_record(slug):
@@ -118,44 +215,6 @@ def update_record(slug):
             g.save()
             r.say("Your recording has been saved.")
             break
-    return str(r)
-
-
-@game_blueprint.route('/game/<slug>/next', methods=['GET', 'POST'])
-def next_call(slug):
-    g = Game.objects.get_or_404(slug=slug)
-    number = get_next_number(g)
-    if number:
-        client.calls.create(to=number, from_=TWILIO_NUMBER,
-                        url=URL_ROOT + url_for('.recursive_call', slug=slug),
-                        status_callback=URL_ROOT + url_for('.next_call',
-                                                           slug=slug))
-    else:
-        start_num = get_start_number(g)
-        if start_num:
-            client.calls.create(to=start_num, from_=TWILIO_NUMBER,
-                                url=URL_ROOT + url_for('.end_game', slug=slug),
-                                status_callback=URL_ROOT +
-                                url_for('.end_broadcast', slug=slug))
-        else:
-            return redirect(url_for('.end_broadcast', slug=slug))
-    return "Complete"
-
-
-@game_blueprint.route('/game/<slug>/recur/',
-                      methods=['GET', 'POST'])
-def recursive_call(slug):
-    g = Game.objects.get_or_404(slug=slug)
-    r = twiml.Response()
-    r.say("This is a game of telephone named {} ."
-          "Press one to hear the phrase:".format(g.name))
-    with r.gather(finishOnKey=1):
-        r.play(get_previous_recording(g))
-        r.say("Recording your voice will begin in 2 seconds,"
-              "press pound to end recording")
-        r.pause(length=2)
-        r.record(action=url_for('.update_record', slug=slug), finishOnKey='*',
-                 maxLength="30", timeout="2")
     return str(r)
 
 
