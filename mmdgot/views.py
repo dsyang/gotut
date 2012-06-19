@@ -39,7 +39,7 @@ def random_sentence():
                  'four eight fifteen sixteen twenty-three fourty-two',
                  'red fish blue fish small fish big shark',
                  'danger will robinson danger']
-        return random.choice(sentences)
+    return random.choice(sentences)
 
 
 def get_next_number(g):

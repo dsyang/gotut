@@ -3,12 +3,35 @@
 
 {% block content %}
 <hr />
-<h2>Start a telephone game</h2>
-<form method="post" action="{{url_for('game.create_game')}}">
-  {{forms.render(context['form'])}}
-    <div class="actions">
-      <input type="submit" class="btn primary" value="start!" />
-    </div>
-</form>
+<div class="row">
+  <div class="span4">
+    <h2>Start a telephone game</h2>
+    <form method="post" action="{{url_for('game.create_game')}}">
+      {{forms.render(context['form'])}}
+      <div class="actions">
+        <input type="submit" class="btn primary" value="start!" />
+      </div>
+    </form>
+  </div>
+  <div class="span6">
+    <h2> Wat.</h2>
+    <p>That's right. It's like the elementary school game where you
+    pass a phrase around a circle and see how messed up it gets. Only
+    with actual phones! Create a game on the left, and mmdgot will
+    call the first person and tell him a phrase, then he must record
+    the same phrase for the next participant, yada yada yada.</p>
+  </div>
+</div>
+<hr />
 
+
+<footer class="row span12">
+  <p class="footer">
+    Powered by the
+    <a href="https://github.com/RobSpectre/Twilio-Hackpack-for-Heroku-and-Flask">
+      Twilio Hackpack for Heroku and Flask</a> |
+    Created by <a href="https://github.com/dsyang"> Dan
+      Yang</a>.
+  </p>
+</footer>
 {% endblock %}
