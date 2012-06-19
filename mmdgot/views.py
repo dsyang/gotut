@@ -22,6 +22,7 @@ from mmdgot.models import Game, Number, NewGameForm, e164
 from flaskext.mongoengine.wtf import model_form
 from twilio import twiml, rest
 from mmdgot import app
+from mmdgot import bitly
 import random
 
 
@@ -38,7 +39,7 @@ def random_sentence():
                  'four eight fifteen sixteen twenty-three fourty-two',
                  'red fish blue fish small fish big shark',
                  'danger will robinson danger']
-    return random.choice(sentences)
+        #return random.choice(sentences)
 
 
 def get_next_number(g):
@@ -57,12 +58,14 @@ def get_previous_recording(g):
     return g.last_recording
 
 
-LOCAL_ROOT = 'http://mmdgot.herokuapp.com'
+LOCAL_ROOT = 'http://5396.localtunnel.com'
 URL_ROOT = LOCAL_ROOT #'http://mmdgot.herokuapp.com'
 TWILIO_NUMBER = '+16464807209'
 TRANSCRIPTION = True
 client = rest.TwilioRestClient(app.config['TWILIO_ACCOUNT_SID'],
                                app.config['TWILIO_AUTH_TOKEN'])
+shortener = bitly.Api(login=app.config['BITLY_LOGIN'],
+                      apikey=app.config['BITLY_API_KEY'])
 
 game_blueprint = Blueprint('game', __name__)
 
@@ -107,7 +110,9 @@ def transcribe(slug):
 def call_logic(slug, state, number):
     g = Game.objects.get_or_404(slug=slug)
     r = twiml.Response()
-    r.say("This is a game of telephone named {}.".format(g.name))
+    r.say("Welcome to the game of telephone named {}.".format(g.name))
+    r.say("To play, you must repeat the phrase you hear"
+          "for the next participant")
     r.say("To hear the phrase, press one.")
     r.gather(numDigits=1, action=url_for('.call_playback',
                                          slug=slug, state=state, number=number),
@@ -131,10 +136,10 @@ def call_playback(slug, state, number):
     if TRANSCRIPTION:
                 r.record(action=(url_for('.update_record', slug=slug)),
                          transcribeCallback=url_for('.transcribe', slug=slug),
-                         finishOnKey="*", maxLength="30", timeout="2")
+                         finishOnKey="#", maxLength="30", timeout="5")
     else:
-        r.record(action=(url_for('.update_record', slug=slug)), finishOnKey="*",
-                 maxLength="30", timeout="2")
+        r.record(action=(url_for('.update_record', slug=slug)), finishOnKey="#",
+                 maxLength="30", timeout="5")
     return str(r)
 
 @game_blueprint.route('/game/<slug>/<state>/call/<number>/callback/<int:rep>',
@@ -262,6 +267,11 @@ def end_game(slug):
 def end_broadcast(slug):
     g = Game.objects.get_or_404(slug=slug)
     url = URL_ROOT + url_for('.summary', slug=slug)
+    #try:
+        #surl = shortener.shorten(url)
+#except:
+#        print (shortener.errors())
+#        surl = url
     body = "Check out everyone's recording of {} " \
            "by visiting {}".format(g.name, url)
     for n in g.numbers:
