@@ -39,7 +39,7 @@ def random_sentence():
                  'four eight fifteen sixteen twenty-three fourty-two',
                  'red fish blue fish small fish big shark',
                  'danger will robinson danger']
-        #return random.choice(sentences)
+        return random.choice(sentences)
 
 
 def get_next_number(g):
@@ -59,7 +59,7 @@ def get_previous_recording(g):
 
 
 LOCAL_ROOT = 'http://5396.localtunnel.com'
-URL_ROOT = LOCAL_ROOT #'http://mmdgot.herokuapp.com'
+URL_ROOT = 'http://mmdgot.herokuapp.com'
 TWILIO_NUMBER = '+16464807209'
 TRANSCRIPTION = True
 client = rest.TwilioRestClient(app.config['TWILIO_ACCOUNT_SID'],
